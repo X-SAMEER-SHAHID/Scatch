@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Order Status Update</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background-color: #4F46E5;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        .content {
+            padding: 20px;
+            background-color: #f9fafb;
+        }
+        .status-update {
+            background-color: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        .status-processing { background-color: #FEF3C7; color: #92400E; }
+        .status-shipped { background-color: #DBEAFE; color: #1E40AF; }
+        .status-delivered { background-color: #D1FAE5; color: #065F46; }
+        .status-cancelled { background-color: #FEE2E2; color: #991B1B; }
+        .button {
+            display: inline-block;
+            padding: 12px 24px;
+            background-color: #4F46E5;
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            margin: 20px 0;
+        }
+        .tracking-info {
+            background-color: #F3F4F6;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 15px 0;
+        }
+        .footer {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Order Status Update</h1>
+        </div>
+        <div class="content">
+            <p>Dear <%= name %>,</p>
+            <p>Your order #<%= orderNumber %> status has been updated.</p>
+            
+            <div class="status-update">
+                <h2>Status Update</h2>
+                <div class="status-badge status-<%= status.toLowerCase() %>">
+                    <%= status.charAt(0).toUpperCase() + status.slice(1) %>
+                </div>
+                
+                <% if (trackingNumber) { %>
+                    <div class="tracking-info">
+                        <h3>Tracking Information</h3>
+                        <p><strong>Tracking Number:</strong> <%= trackingNumber %></p>
+                        <p>You can track your package using the tracking number above.</p>
+                    </div>
+                <% } %>
+
+                <p>Click the button below to view your order details:</p>
+                <a href="<%= orderUrl %>" class="button">View Order Details</a>
+            </div>
+
+            <% if (status === 'shipped') { %>
+                <p>Your order is on its way! We'll notify you when it's delivered.</p>
+            <% } else if (status === 'delivered') { %>
+                <p>Your order has been delivered. Thank you for shopping with us!</p>
+            <% } %>
+
+            <p>If you have any questions about your order, please don't hesitate to contact our customer service team.</p>
+            
+            <p>Best regards,<br>Your Store Team</p>
+        </div>
+        <div class="footer">
+            <p>This email was sent to <%= email %>. If you didn't place this order, please contact us immediately.</p>
+            <p>&copy; <%= new Date().getFullYear() %> Your Store. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html> 

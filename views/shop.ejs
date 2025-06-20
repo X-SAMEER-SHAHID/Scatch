@@ -1,0 +1,74 @@
+<%- include('./partials/header') %>
+
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <!-- Search and Filters -->
+    <div class="mb-8 flex flex-col md:flex-row justify-between items-center gap-4">
+        <div class="w-full md:w-96">
+            <div class="relative">
+                <input type="text" 
+                    placeholder="Search products..." 
+                    class="w-full px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary"
+                >
+                <i class="ri-search-line absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+            </div>
+        </div>
+        <div class="flex gap-4">
+            <select class="px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary">
+                <option value="">All Categories</option>
+                <option value="electronics">Electronics</option>
+                <option value="clothing">Clothing</option>
+                <option value="books">Books</option>
+            </select>
+            <select class="px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary">
+                <option value="">Sort By</option>
+                <option value="price-low">Price: Low to High</option>
+                <option value="price-high">Price: High to Low</option>
+                <option value="newest">Newest First</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- Products Grid -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        <% products.forEach(product => { %>
+            <div class="bg-white rounded-lg shadow-sm overflow-hidden">
+                <a href="/shop/<%= product._id %>" class="block">
+                    <img src="<%= product.images[0] %>" alt="<%= product.name %>" class="w-full h-48 object-cover">
+                </a>
+                <div class="p-4">
+                    <h3 class="text-lg font-medium text-gray-900">
+                        <a href="/shop/<%= product._id %>" class="hover:text-indigo-600">
+                            <%= product.name %>
+                        </a>
+                    </h3>
+                    <p class="mt-1 text-sm text-gray-500"><%= product.description %></p>
+                    <div class="mt-4 flex items-center justify-between">
+                        <span class="text-lg font-medium text-gray-900">$<%= product.price %></span>
+                        <form action="/cart/add/<%= product._id %>" method="POST">
+                            <button type="submit" class="inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700">
+                                Add to Cart
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        <% }); %>
+    </div>
+
+    <!-- Pagination -->
+    <div class="mt-8 flex justify-center">
+        <nav class="flex items-center gap-2">
+            <button class="px-3 py-1 rounded-lg border border-gray-200 hover:bg-gray-50">
+                <i class="ri-arrow-left-s-line"></i>
+            </button>
+            <button class="px-3 py-1 rounded-lg bg-primary text-white">1</button>
+            <button class="px-3 py-1 rounded-lg border border-gray-200 hover:bg-gray-50">2</button>
+            <button class="px-3 py-1 rounded-lg border border-gray-200 hover:bg-gray-50">3</button>
+            <button class="px-3 py-1 rounded-lg border border-gray-200 hover:bg-gray-50">
+                <i class="ri-arrow-right-s-line"></i>
+            </button>
+        </nav>
+    </div>
+</div>
+
+<%- include('./partials/footer') %>

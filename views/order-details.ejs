@@ -1,0 +1,107 @@
+<%- include('partials/header') %>
+
+<div class="container mx-auto px-4 py-8">
+    <div class="max-w-4xl mx-auto">
+        <!-- Order Header -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <div class="flex justify-between items-center mb-4">
+                <h1 class="text-2xl font-bold text-gray-800">Order #<%= order.orderNumber %></h1>
+                <span class="px-4 py-2 rounded-full text-sm font-semibold
+                    <%= order.status === 'processing' ? 'bg-yellow-100 text-yellow-800' : '' %>
+                    <%= order.status === 'shipped' ? 'bg-blue-100 text-blue-800' : '' %>
+                    <%= order.status === 'delivered' ? 'bg-green-100 text-green-800' : '' %>
+                    <%= order.status === 'cancelled' ? 'bg-red-100 text-red-800' : '' %>">
+                    <%= order.status.charAt(0).toUpperCase() + order.status.slice(1) %>
+                </span>
+            </div>
+            <div class="grid grid-cols-2 gap-4 text-sm text-gray-600">
+                <div>
+                    <p class="font-semibold">Order Date</p>
+                    <p><%= new Date(order.createdAt).toLocaleDateString() %></p>
+                </div>
+                <div>
+                    <p class="font-semibold">Payment Method</p>
+                    <p><%= order.paymentMethod.charAt(0).toUpperCase() + order.paymentMethod.slice(1).replace('_', ' ') %></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Order Items -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <h2 class="text-xl font-semibold text-gray-800 mb-4">Order Items</h2>
+            <div class="space-y-4">
+                <% order.items.forEach(item => { %>
+                    <div class="flex items-center space-x-4 p-4 border rounded-lg">
+                        <img src="<%= item.product.images[0] %>" alt="<%= item.product.name %>" 
+                            class="w-20 h-20 object-cover rounded-lg">
+                        <div class="flex-1">
+                            <h3 class="font-semibold text-gray-800"><%= item.product.name %></h3>
+                            <p class="text-sm text-gray-600">Quantity: <%= item.quantity %></p>
+                            <p class="text-sm text-gray-600">Price: $<%= item.price.toFixed(2) %></p>
+                        </div>
+                        <div class="text-right">
+                            <p class="font-semibold text-gray-800">$<%= (item.price * item.quantity).toFixed(2) %></p>
+                        </div>
+                    </div>
+                <% }); %>
+            </div>
+        </div>
+
+        <!-- Shipping Information -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <h2 class="text-xl font-semibold text-gray-800 mb-4">Shipping Information</h2>
+            <div class="grid grid-cols-2 gap-4 text-sm text-gray-600">
+                <div>
+                    <p class="font-semibold">Shipping Address</p>
+                    <p><%= order.shippingAddress.fullname %></p>
+                    <p><%= order.shippingAddress.street %></p>
+                    <p><%= order.shippingAddress.city %>, <%= order.shippingAddress.state %> <%= order.shippingAddress.postalCode %></p>
+                    <p><%= order.shippingAddress.country %></p>
+                </div>
+                <div>
+                    <p class="font-semibold">Contact Information</p>
+                    <p>Phone: <%= order.shippingAddress.phone %></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Order Summary -->
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <h2 class="text-xl font-semibold text-gray-800 mb-4">Order Summary</h2>
+            <div class="space-y-2 text-sm">
+                <div class="flex justify-between">
+                    <span class="text-gray-600">Subtotal</span>
+                    <span class="font-semibold">$<%= order.total.toFixed(2) %></span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-600">Shipping</span>
+                    <span class="font-semibold">$<%= (order.total * 0.1).toFixed(2) %></span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-600">Tax</span>
+                    <span class="font-semibold">$<%= (order.total * 0.1).toFixed(2) %></span>
+                </div>
+                <div class="border-t pt-2 mt-2">
+                    <div class="flex justify-between">
+                        <span class="font-semibold">Total</span>
+                        <span class="font-semibold text-lg">$<%= (order.total * 1.2).toFixed(2) %></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <% if (order.status === 'processing') { %>
+            <div class="mt-6 flex justify-end space-x-4">
+                <form action="/api/orders/<%= order._id %>/cancel" method="POST" class="inline">
+                    <button type="submit" 
+                        class="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors">
+                        Cancel Order
+                    </button>
+                </form>
+            </div>
+        <% } %>
+    </div>
+</div>
+
+<%- include('partials/footer') %> 

@@ -1,0 +1,67 @@
+<%- include('./partials/header') %>
+
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <h1 class="text-3xl font-bold text-gray-900 mb-8">Shopping Cart</h1>
+
+    <% if (cart && cart.length > 0) { %>
+        <div class="bg-white shadow overflow-hidden sm:rounded-lg">
+            <ul class="divide-y divide-gray-200">
+                <% cart.forEach(item => { %>
+                    <li class="p-6">
+                        <div class="flex items-center">
+                            <div class="flex-shrink-0 h-24 w-24">
+                                <img class="h-24 w-24 object-cover rounded-md" src="<%= item.product.images[0] %>" alt="<%= item.product.name %>">
+                            </div>
+                            <div class="ml-6 flex-1">
+                                <div class="flex items-center justify-between">
+                                    <h3 class="text-lg font-medium text-gray-900">
+                                        <%= item.product.name %>
+                                    </h3>
+                                    <p class="ml-4 text-lg font-medium text-gray-900">
+                                        $<%= (item.product.price * item.quantity).toFixed(2) %>
+                                    </p>
+                                </div>
+                                <div class="mt-2 flex items-center justify-between">
+                                    <div class="flex items-center">
+                                        <form action="/cart/update/<%= item.product._id %>" method="POST" class="flex items-center">
+                                            <label for="quantity" class="mr-2 text-sm text-gray-600">Quantity:</label>
+                                            <select name="quantity" id="quantity" onchange="this.form.submit()" class="rounded-md border-gray-300 text-sm">
+                                                <% for(let i = 1; i <= 10; i++) { %>
+                                                    <option value="<%= i %>" <%= item.quantity === i ? 'selected' : '' %>><%= i %></option>
+                                                <% } %>
+                                            </select>
+                                        </form>
+                                    </div>
+                                    <form action="/cart/remove/<%= item.product._id %>" method="POST">
+                                        <button type="submit" class="text-red-600 hover:text-red-900 text-sm font-medium">
+                                            Remove
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </li>
+                <% }); %>
+            </ul>
+            <div class="border-t border-gray-200 px-6 py-4">
+                <div class="flex justify-between items-center">
+                    <div class="text-lg font-medium text-gray-900">
+                        Total: $<%= cart.reduce((total, item) => total + (item.product.price * item.quantity), 0).toFixed(2) %>
+                    </div>
+                    <a href="/shop" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700">
+                        Continue Shopping
+                    </a>
+                </div>
+            </div>
+        </div>
+    <% } else { %>
+        <div class="text-center py-12">
+            <h3 class="text-lg font-medium text-gray-900 mb-4">Your cart is empty</h3>
+            <a href="/shop" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700">
+                Start Shopping
+            </a>
+        </div>
+    <% } %>
+</div>
+
+<%- include('./partials/footer') %>
