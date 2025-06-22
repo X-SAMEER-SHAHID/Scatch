@@ -1,88 +1,239 @@
-const bcrypt = require("bcrypt");
+const bcrypt = require("bcryptjs");
 const userModel = require("../models/usermodel")
-const productsModel = require("../models/Product");
+const prodectsModel = require("../models/productmodel");
 const jwt = require("jsonwebtoken");
 const { generateToken } = require("../utils/generateToken")
-const { AppError } = require('../utils/errorHandler');
+const crypto = require('crypto');
+const nodemailer = require('nodemailer');
 
-module.exports.registerUser = async (req, res, next) => {
+
+module.exports.registerUser = async (req, res) => {
     try {
-        const { fullname, email, password } = req.body;
-        if (!fullname || !email || !password) {
-            req.flash('error', 'All fields are required');
-            return res.redirect('/');
-        }
+        const { fullName, email, password } = req.body;
+
+        // Check if user exists
         const existingUser = await userModel.findOne({ email });
         if (existingUser) {
-            req.flash('error', 'Email already in use');
-            return res.redirect('/');
+            if (req.headers['content-type'] === 'application/json') {
+                return res.status(400).json({ error: 'Email already registered' });
+            } else {
+                req.flash('error', 'Email already registered');
+                return res.redirect('/auth/register');
+            }
         }
-        const hashedPassword = await bcrypt.hash(password, 12);
-        const user = await userModel.create({
-            fullname,
+
+        // Create new user (password will be hashed by the model's pre-save middleware)
+        const user = new userModel({
+            fullName,
             email,
-            password: hashedPassword
+            password,
+            isAdmin: false
         });
 
-        const token = generateToken(user);
-        res.cookie('jwt', token, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            maxAge: 24 * 60 * 60 * 1000 // 24 hours
-        });
+        await user.save();
 
-        // Get products for the shop page
-        const products = await productsModel.find();
+        // Log activity
+        await user.logActivity('REGISTER', 'New user registration');
 
-        // Set success message and render shop page
-        req.flash('success', 'Registration successful! Welcome to Scatch.');
-        res.render('shop', {
-            products,
-            success: 'Registration successful! Welcome to Scatch.',
-            user: user
-        });
-    } catch (err) {
-        req.flash('error', err.message);
-        res.redirect('/');
+        if (req.headers['content-type'] === 'application/json') {
+            return res.status(201).json({
+                success: true,
+                message: 'Registration successful! Please login.',
+                user: {
+                    id: user._id,
+                    fullName: user.fullName,
+                    email: user.email
+                }
+            });
+        } else {
+            req.flash('success', 'Registration successful! You can now log in.');
+            res.redirect('/');
+        }
+    } catch (error) {
+        console.error('Registration error:', error);
+        if (req.headers['content-type'] === 'application/json') {
+            return res.status(500).json({ error: 'Error during registration. Please try again.' });
+        } else {
+            req.flash('error', 'Error during registration. Please try again.');
+            res.redirect('/auth/register');
+        }
     }
-}
+};
 
-module.exports.loginUser = async (req, res, next) => {
+module.exports.loginUser = async function (req, res) {
     try {
         const { email, password } = req.body;
-        if (!email || !password) {
-            req.flash('error', 'Email and password are required');
-            return res.redirect('/');
-        }
+        console.log('Login form data:', req.body);
+
         const user = await userModel.findOne({ email });
         if (!user) {
-            req.flash('error', 'Invalid email or password');
-            return res.redirect('/');
+            req.flash("error", "User does not exist, please register first.");
+            return res.redirect("/auth/login");
         }
+
         const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) {
-            req.flash('error', 'Invalid email or password');
-            return res.redirect('/');
+            req.flash("error", "Incorrect Email or Password.");
+            return res.redirect("/auth/login");
         }
+
+        // Generate token and set cookie
         const token = generateToken(user);
-        res.cookie('jwt', token, {
+        res.cookie("token", token, {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
             maxAge: 24 * 60 * 60 * 1000 // 24 hours
         });
 
-        // Get products for the shop page
-        const products = await productsModel.find();
+        // Update last activity
+        user.lastActivity = new Date();
+        await user.save();
 
-        // Set success message and render shop page
-        req.flash('success', 'Login successful! Welcome back.');
-        res.render('shop', {
-            products,
-            success: 'Login successful! Welcome back.',
-            user: user
-        });
-    } catch (err) {
-        req.flash('error', err.message);
-        res.redirect('/');
+        // Redirect based on user type
+        if (user.isAdmin) {
+            return res.redirect("/owner/admin/dashboard");
+        } else {
+            const products = await prodectsModel.find();
+            return res.render("shop", { products, success: "" });
+        }
+    } catch (error) {
+        console.error('Login error:', error);
+        req.flash("error", "An error occurred during login.");
+        return res.redirect("/auth/login");
     }
-}
+};
+
+// Forgot Password - Email Link Generation
+module.exports.forgotPassword = async (req, res) => {
+    try {
+        const { email } = req.body;
+        const user = await userModel.findOne({ email });
+
+        if (!user) {
+            req.flash("error", "No account with that email address exists.");
+            return res.redirect("/forgot-password");
+        }
+
+        // Generate reset token
+        const resetToken = crypto.randomBytes(20).toString('hex');
+        user.resetPasswordToken = resetToken;
+        user.resetPasswordExpires = Date.now() + 3600000; // Token expires in 1 hour
+        await user.save();
+
+        // Create email transporter
+        const transporter = nodemailer.createTransport({
+            service: 'gmail',
+            auth: {
+                user: process.env.EMAIL_USER,
+                pass: process.env.EMAIL_PASS
+            }
+        });
+
+        // Email content
+        const resetUrl = `${req.protocol}://${req.get('host')}/reset-password/${resetToken}`;
+        const mailOptions = {
+            from: process.env.EMAIL_USER,
+            to: user.email,
+            subject: 'Password Reset Request',
+            html: `
+                <p>You requested a password reset</p>
+                <p>Click this <a href="${resetUrl}">link</a> to reset your password.</p>
+                <p>This link will expire in 1 hour.</p>
+                <p>If you didn't request this, please ignore this email.</p>
+            `
+        };
+
+        await transporter.sendMail(mailOptions);
+        req.flash("success", "Password reset link has been sent to your email.");
+        res.redirect("/login");
+    } catch (err) {
+        req.flash("error", "Error sending password reset email.");
+        res.redirect("/forgot-password");
+    }
+};
+
+// Reset Password with Token
+module.exports.resetPassword = async (req, res) => {
+    try {
+        const { token } = req.params;
+        const { password } = req.body;
+
+        const user = await userModel.findOne({
+            resetPasswordToken: token,
+            resetPasswordExpires: { $gt: Date.now() }
+        });
+
+        if (!user) {
+            req.flash("error", "Password reset token is invalid or has expired.");
+            return res.redirect("/forgot-password");
+        }
+
+        // Hash new password
+        const salt = await bcrypt.genSalt(10);
+        user.password = await bcrypt.hash(password, salt);
+        user.resetPasswordToken = undefined;
+        user.resetPasswordExpires = undefined;
+        await user.save();
+
+        req.flash("success", "Your password has been updated.");
+        res.redirect("/login");
+    } catch (err) {
+        req.flash("error", "Error resetting password.");
+        res.redirect("/forgot-password");
+    }
+};
+
+// Security Questions Password Reset
+module.exports.securityQuestionsReset = async (req, res) => {
+    try {
+        const { email, answers } = req.body;
+        const user = await userModel.findOne({ email });
+
+        if (!user) {
+            req.flash("error", "No account with that email address exists.");
+            return res.redirect("/security-questions");
+        }
+
+        // Verify security question answers
+        const isCorrect = user.securityQuestions.every((q, index) =>
+            q.answer.toLowerCase() === answers[index].toLowerCase()
+        );
+
+        if (!isCorrect) {
+            req.flash("error", "Incorrect answers to security questions.");
+            return res.redirect("/security-questions");
+        }
+
+        // Generate temporary password
+        const tempPassword = crypto.randomBytes(4).toString('hex');
+        const salt = await bcrypt.genSalt(10);
+        user.password = await bcrypt.hash(tempPassword, salt);
+        await user.save();
+
+        // Send temporary password via email
+        const transporter = nodemailer.createTransport({
+            service: 'gmail',
+            auth: {
+                user: process.env.EMAIL_USER,
+                pass: process.env.EMAIL_PASS
+            }
+        });
+
+        const mailOptions = {
+            from: process.env.EMAIL_USER,
+            to: user.email,
+            subject: 'Your Temporary Password',
+            html: `
+                <p>Your temporary password is: ${tempPassword}</p>
+                <p>Please login with this temporary password and change it immediately.</p>
+            `
+        };
+
+        await transporter.sendMail(mailOptions);
+        req.flash("success", "A temporary password has been sent to your email.");
+        res.redirect("/login");
+    } catch (err) {
+        req.flash("error", "Error processing security questions reset.");
+        res.redirect("/security-questions");
+    }
+};

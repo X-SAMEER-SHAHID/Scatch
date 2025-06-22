@@ -1,70 +1,82 @@
 const mongoose = require('mongoose');
-const Product = require('../models/Product');
+const axios = require('axios');
+const Product = require('../models/productmodel');
+require('dotenv').config();
 
-const products = [
-    {
-        sku: "WH-001",
-        name: "Wireless Headphones",
-        description: "High-quality wireless headphones with noise cancellation",
-        price: 199.99,
-        images: ["https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500"],
-        category: "Electronics",
-        stock: 50
-    },
-    {
-        sku: "SW-001",
-        name: "Smart Watch",
-        description: "Feature-rich smartwatch with health tracking",
-        price: 299.99,
-        images: ["https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500"],
-        category: "Electronics",
-        stock: 30
-    },
-    {
-        sku: "RS-001",
-        name: "Running Shoes",
-        description: "Comfortable running shoes for all terrains",
-        price: 89.99,
-        images: ["https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=500"],
-        category: "Sports",
-        stock: 100
-    },
-    {
-        sku: "BP-001",
-        name: "Backpack",
-        description: "Durable backpack with multiple compartments",
-        price: 49.99,
-        images: ["https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=500"],
-        category: "Accessories",
-        stock: 75
-    },
-    {
-        sku: "CM-001",
-        name: "Coffee Maker",
-        description: "Programmable coffee maker with thermal carafe",
-        price: 79.99,
-        images: ["https://images.unsplash.com/photo-1570087935864-441b5fe83d2a?w=500"],
-        category: "Home",
-        stock: 25
-    }
+// Connect to MongoDB
+mongoose.connect('mongodb://localhost:27017/scatch')
+    .then(() => console.log('Connected to MongoDB'))
+    .catch(err => console.error('Could not connect to MongoDB', err));
+
+// Product names for demo
+const productNames = [
+    'Classic T-Shirt', 'Denim Jeans', 'Leather Jacket', 'Running Shoes',
+    'Summer Dress', 'Winter Coat', 'Casual Shirt', 'Sports Shorts',
+    'Elegant Watch', 'Sunglasses', 'Backpack', 'Sneakers',
+    'Hoodie', 'Scarf', 'Beanie', 'Socks Pack',
+    'Belt', 'Wallet', 'Umbrella', 'Gloves'
 ];
 
-const seedProducts = async () => {
-    try {
-        await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/ecommerce');
-        // Drop the products collection if it exists
-        if (await mongoose.connection.db.listCollections({ name: 'products' }).hasNext()) {
-            await mongoose.connection.db.dropCollection('products');
-            console.log('Dropped existing products collection.');
-        }
-        // Add new products
-        await Product.insertMany(products);
-        console.log('Products seeded successfully');
-        process.exit(0);
-    } catch (error) {
-        console.error('Error seeding products:', error);
-        process.exit(1);
-    }
+// Function to generate random price between min and max
+const randomPrice = (min, max) => Math.floor(Math.random() * (max - min + 1) + min);
+
+// Function to generate random color
+const randomColor = () => {
+    const colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEEAD',
+        '#D4A5A5', '#9E9E9E', '#58B19F', '#FFB6B9', '#FAD02E'];
+    return colors[Math.floor(Math.random() * colors.length)];
 };
 
+// Function to fetch image from Lorem Picsum
+async function getImage(index, width = 800, height = 600) {
+    try {
+        const response = await axios.get(`https://picsum.photos/${width}/${height}?random=${index}`, {
+            responseType: 'arraybuffer'
+        });
+        return Buffer.from(response.data, 'binary');
+    } catch (error) {
+        console.error('Error fetching image:', error);
+        return null;
+    }
+}
+
+// Function to create products
+async function seedProducts() {
+    try {
+        // Clear existing products
+        await Product.deleteMany({});
+
+        for (let i = 0; i < 20; i++) {
+            // Get main product image
+            const image = await getImage(i);
+            // Get title image (smaller size)
+            const titleImage = await getImage(i + 100, 400, 300);
+
+            const product = new Product({
+                name: productNames[i],
+                price: randomPrice(20, 200),
+                discount: randomPrice(0, 30),
+                bgcolor: randomColor(),
+                panelcolor: randomColor(),
+                textcolor: '#FFFFFF',
+                image: image,
+                titleImage: titleImage
+            });
+
+            await product.save();
+            console.log(`Added product: ${product.name}`);
+
+            // Add a small delay between requests to avoid overwhelming the server
+            await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+
+        console.log('Seeding completed!');
+        mongoose.connection.close();
+    } catch (error) {
+        console.error('Error seeding products:', error);
+        mongoose.connection.close();
+    }
+}
+
+// Run the seeding
 seedProducts(); 

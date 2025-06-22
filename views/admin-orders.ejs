@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Orders</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .order-status {
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            font-weight: 500;
+        }
+        .status-ordered { background-color: #cce5ff; }
+        .status-in-transit { background-color: #fff3cd; }
+        .status-out-for-delivery { background-color: #d4edda; }
+        .status-delivered { background-color: #d1e7dd; }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <div class="col-md-2 sidebar p-3 bg-dark text-white min-vh-100">
+                <h3 class="mb-4">Admin Panel</h3>
+                <ul class="nav flex-column">
+                    <li class="nav-item">
+                        <a class="nav-link text-white" href="/admin/dashboard">Dashboard</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active text-white" href="/admin/orders">Orders</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link text-white" href="/owner/admin">Add Products</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link text-white" href="/inventory">Inventory Management</a>
+                    </li>
+                    <li class="nav-item mt-5">
+                        <a class="nav-link text-danger" href="/logout">Logout</a>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Main Content -->
+            <div class="col-md-10 p-4">
+                <h2 class="mb-4">Order Management</h2>
+                
+                <% if (error && error.length > 0) { %>
+                    <div class="alert alert-danger" role="alert">
+                        <%= error[0] %>
+                    </div>
+                <% } %>
+                
+                <div class="card">
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>Order #</th>
+                                        <th>Customer</th>
+                                        <th>Date</th>
+                                        <th>Total</th>
+                                        <th>Current Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <% if (orders && orders.length > 0) { %>
+                                        <% orders.forEach(function(order) { %>
+                                            <tr>
+                                                <td><%= order.orderNumber %></td>
+                                                <td><%= order.user ? order.user.name : 'Unknown User' %></td>
+                                                <td><%= new Date(order.createdAt).toLocaleDateString() %></td>
+                                                <td>Rs<%= order.total %></td>
+                                                <td>
+                                                    <span class="order-status status-<%= order.status.toLowerCase().replace(' ', '-') %>">
+                                                        <%= order.status %>
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    <div class="d-flex gap-2">
+                                                        <select class="form-select form-select-sm w-auto" 
+                                                                onchange="updateOrderStatus('<%= order._id %>', this.value)">
+                                                            <option value="">Update Status</option>
+                                                            <option value="ordered">Ordered</option>
+                                                            <option value="in transit">In Transit</option>
+                                                            <option value="out for delivery">Out for Delivery</option>
+                                                            <option value="delivered">Delivered</option>
+                                                        </select>
+                                                        <button class="btn btn-sm btn-primary" 
+                                                                onclick="viewOrderDetails('<%= order._id %>')">
+                                                            View Details
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        <% }); %>
+                                    <% } else { %>
+                                        <tr>
+                                            <td colspan="6" class="text-center">No orders found</td>
+                                        </tr>
+                                    <% } %>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        async function updateOrderStatus(orderId, status) {
+            if (!status) return;
+            
+            try {
+                const response = await fetch(`/admin/orders/${orderId}/status`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ 
+                        status,
+                        location: 'Distribution Center',
+                        details: `Order status updated to ${status}`
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to update status');
+                }
+
+                // Reload the page to show updated status
+                window.location.reload();
+            } catch (error) {
+                console.error('Error updating order status:', error);
+                alert('Failed to update order status');
+            }
+        }
+
+        function viewOrderDetails(orderId) {
+            window.location.href = `/admin/orders/${orderId}`;
+        }
+    </script>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html> 

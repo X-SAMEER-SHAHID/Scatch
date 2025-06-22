@@ -1,0 +1,82 @@
+<%- include('./partials/header') %>
+
+<div class="container mx-auto max-w-4xl py-10">
+    <% if (success && success.length > 0) { %>
+        <div class="mb-4 p-3 rounded bg-green-100 text-green-800"><%= success %></div>
+    <% } %>
+    <% if (error && error.length > 0) { %>
+        <div class="mb-4 p-3 rounded bg-red-100 text-red-800"><%= error %></div>
+    <% } %>
+    <div class="bg-white rounded-xl shadow-lg flex flex-col md:flex-row gap-8 p-8">
+        <div class="flex-1 flex flex-col items-center justify-center">
+            <img class="h-72 w-auto object-contain rounded-lg border mb-4" src="<%= product.image ? `data:image/jpeg;base64,${product.image.toString('base64')}` : 'https://via.placeholder.com/800x600.png?text=' + encodeURIComponent(product.name) %>" alt="<%= product.name %>">
+            <div class="flex gap-2 mt-2">
+                <% for (let i = 1; i <= 5; i++) { %>
+                    <i class="ri-star-fill text-2xl <%= (product.reviews && product.reviews.length > 0 && Math.round(product.reviews.reduce((a, r) => a + r.rating, 0) / product.reviews.length) >= i) ? 'text-yellow-400' : 'text-gray-300' %>"></i>
+                <% } %>
+                <span class="ml-2 text-gray-600 text-sm">(<%= product.reviews.length %> reviews)</span>
+            </div>
+        </div>
+        <div class="flex-1 flex flex-col gap-4">
+            <h2 class="text-3xl font-bold mb-2"><%= product.name %></h2>
+            <p class="text-lg text-gray-700 mb-2"><%= product.description %></p>
+            <div class="flex items-center gap-4 mb-6">
+                <span class="text-2xl text-primary font-semibold">Rs <%= product.price %></span>
+                <% if (product.discount > 0) { %>
+                    <span class="text-lg text-green-600 font-medium">-<%= product.discount %>% off</span>
+                <% } %>
+            </div>
+            <div class="mb-2">
+                <span class="font-medium">Available Quantity:</span> <%= product.quantity %>
+            </div>
+            <form action="/addtocart/<%= product._id %>" method="get">
+                <button type="submit" class="bg-primary text-white px-6 py-2 rounded hover:bg-indigo-700 transition">Add to Cart</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Reviews Section -->
+    <div class="mt-10 bg-white rounded-xl shadow p-8">
+        <h3 class="text-2xl font-semibold mb-4">Reviews</h3>
+        <% if (product.reviews.length === 0) { %>
+            <p class="text-gray-500 mb-4">No reviews yet. Be the first to review this product!</p>
+        <% } else { %>
+            <div class="space-y-6 mb-8">
+                <% product.reviews.slice().reverse().forEach(function(review) { %>
+                    <div class="border-b pb-4">
+                        <div class="flex items-center gap-2 mb-1">
+                            <% for (let i = 1; i <= 5; i++) { %>
+                                <i class="ri-star-fill <%= review.rating >= i ? 'text-yellow-400' : 'text-gray-300' %>"></i>
+                            <% } %>
+                            <span class="ml-2 text-gray-700 font-medium"><%= review.user ? review.user.fullName : 'Anonymous' %></span>
+                            <span class="ml-4 text-gray-400 text-xs"><%= new Date(review.date).toLocaleDateString() %></span>
+                        </div>
+                        <div class="text-gray-700"><%= review.comment %></div>
+                    </div>
+                <% }) %>
+            </div>
+        <% } %>
+        <% if (user) { %>
+        <form action="/product/<%= product._id %>/review" method="POST" class="bg-neutral p-6 rounded-lg">
+            <h4 class="text-lg font-semibold mb-2">Write a Review</h4>
+            <div class="flex items-center gap-2 mb-4">
+                <label class="font-medium">Your Rating:</label>
+                <select name="rating" class="border rounded p-2" required>
+                    <option value="">Select</option>
+                    <% for (let i = 1; i <= 5; i++) { %>
+                        <option value="<%= i %>"><%= i %> Star<%= i > 1 ? 's' : '' %></option>
+                    <% } %>
+                </select>
+            </div>
+            <div class="mb-4">
+                <textarea name="comment" rows="3" class="border rounded w-full p-2" placeholder="Write your review here..." required></textarea>
+            </div>
+            <button type="submit" class="bg-primary text-white px-4 py-2 rounded">Submit Review</button>
+        </form>
+        <% } else { %>
+            <div class="text-gray-500">Please <a href="/auth/login" class="text-primary underline">log in</a> to write a review.</div>
+        <% } %>
+    </div>
+</div>
+
+<%- include('./partials/footer') %> 

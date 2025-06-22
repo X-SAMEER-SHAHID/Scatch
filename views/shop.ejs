@@ -1,74 +1,131 @@
 <%- include('./partials/header') %>
 
-<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-    <!-- Search and Filters -->
-    <div class="mb-8 flex flex-col md:flex-row justify-between items-center gap-4">
-        <div class="w-full md:w-96">
-            <div class="relative">
-                <input type="text" 
-                    placeholder="Search products..." 
-                    class="w-full px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary"
-                >
-                <i class="ri-search-line absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+<% if(success && success.length>0){ %>
+    <div class="absolute top-5 left-1/2 -translate-x-1/2 -translate-y-1/2 p-3 rounded-md bg-blue-500">
+        <span class="inline-block mt-1 mb-1 text-white">
+            <%= success %>
+        </span>
+    </div>
+    <% } %>
+
+    <div class="w-full min-h-screen bg-neutral flex items-start px-8 py-10 gap-8">
+        <div class="w-[20%] bg-white rounded-xl shadow-lg p-6 h-fit flex flex-col gap-8">
+            <div class="flex flex-col gap-2">
+                <form id="searchForm" class="mb-4">
+                    <div class="relative">
+                        <input type="text" 
+                               id="searchInput" 
+                               class="w-full px-3 py-2 border rounded-lg bg-neutral focus:ring-2 focus:ring-primary focus:border-primary transition" 
+                               placeholder="Search products...">
+                        <button type="submit" 
+                                class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-primary">
+                            <i class="ri-search-line"></i>
+                        </button>
+                    </div>
+                </form>
+            </div>
+            <div class="flex flex-col gap-2">
+                <h3 class="text-secondary font-semibold mb-3 text-lg">Sort by</h3>
+                <form id="sortForm" action="/shop" method="get">
+                    <% if (typeof category !== 'undefined' && category) { %>
+                        <input type="hidden" name="category" value="<%= category %>">
+                    <% } %>
+                    <select class="border px-3 py-2 rounded-lg bg-neutral focus:ring-2 focus:ring-primary focus:border-primary transition w-full" name="sortby" onchange="document.getElementById('sortForm').submit()">
+                        <option value="newest" <%= (typeof sortby !== 'undefined' && sortby === 'newest') ? 'selected' : '' %>>Newest</option>
+                        <option value="price" <%= (typeof sortby !== 'undefined' && sortby === 'price') ? 'selected' : '' %>>Price Descending</option>
+                    </select>
+                </form>
+            </div>
+            <div class="flex flex-col gap-2">
+                <h4 class="text-lg font-semibold text-secondary mb-2">Categories</h4>
+                <a class="text-gray-600 hover:text-primary transition-colors px-3 py-2 rounded-lg <%= (typeof category !== 'undefined' && category === 'new') ? 'bg-primary/10 font-bold border-l-4 border-primary' : '' %>" href="/shop?category=new<%= (typeof sortby !== 'undefined' && sortby) ? `&sortby=${sortby}` : '' %>">New Collection</a>
+                <a class="text-gray-600 hover:text-primary transition-colors px-3 py-2 rounded-lg <%= (typeof category === 'undefined' || !category || category === 'all') ? 'bg-primary/10 font-bold border-l-4 border-primary' : '' %>" href="/shop?category=all<%= (typeof sortby !== 'undefined' && sortby) ? `&sortby=${sortby}` : '' %>">All Products</a>
+                <a class="text-gray-600 hover:text-primary transition-colors px-3 py-2 rounded-lg <%= (typeof category !== 'undefined' && category === 'discount') ? 'bg-primary/10 font-bold border-l-4 border-primary' : '' %>" href="/shop?category=discount<%= (typeof sortby !== 'undefined' && sortby) ? `&sortby=${sortby}` : '' %>">Discounted Products</a>
             </div>
         </div>
-        <div class="flex gap-4">
-            <select class="px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary">
-                <option value="">All Categories</option>
-                <option value="electronics">Electronics</option>
-                <option value="clothing">Clothing</option>
-                <option value="books">Books</option>
-            </select>
-            <select class="px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary">
-                <option value="">Sort By</option>
-                <option value="price-low">Price: Low to High</option>
-                <option value="price-high">Price: High to Low</option>
-                <option value="newest">Newest First</option>
-            </select>
-        </div>
-    </div>
-
-    <!-- Products Grid -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        <% products.forEach(product => { %>
-            <div class="bg-white rounded-lg shadow-sm overflow-hidden">
-                <a href="/shop/<%= product._id %>" class="block">
-                    <img src="<%= product.images[0] %>" alt="<%= product.name %>" class="w-full h-48 object-cover">
-                </a>
-                <div class="p-4">
-                    <h3 class="text-lg font-medium text-gray-900">
-                        <a href="/shop/<%= product._id %>" class="hover:text-indigo-600">
-                            <%= product.name %>
-                        </a>
-                    </h3>
-                    <p class="mt-1 text-sm text-gray-500"><%= product.description %></p>
-                    <div class="mt-4 flex items-center justify-between">
-                        <span class="text-lg font-medium text-gray-900">$<%= product.price %></span>
-                        <form action="/cart/add/<%= product._id %>" method="POST">
-                            <button type="submit" class="inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700">
-                                Add to Cart
-                            </button>
-                        </form>
+        
+        <div class="w-[80%] grid grid-cols-3 gap-6">
+            <% products.forEach(function(product){ %>
+            <div class="bg-white rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow">
+                <a href="/product/<%= product._id %>" class="block">
+                        <div class="w-full h-52 flex items-center justify-center bg-gradient-to-br from-[<%= product.bgcolor %>] to-[<%= product.panelcolor %>]">
+                            <img class="h-[12rem] hover:scale-110 transition-transform duration-300" 
+                                 src="<%= product.image ? `data:image/jpeg;base64,${product.image.toString('base64')}` : 'https://via.placeholder.com/800x600.png?text=' + encodeURIComponent(product.name) %>" 
+                                 alt="<%= product.name %>">
+                        </div>
+                    <div class="px-6 py-4">
+                                <h3 class="text-lg font-medium"><%= product.name %></h3>
+                                <h4 class="text-primary font-semibold">Rs <%= product.price %></h4>
                     </div>
+                </a>
+                <div class="px-6 py-4 border-t flex justify-end">
+                    <form action="/addtocart/<%= product._id %>" method="get" style="margin:0;">
+                        <button type="submit" class="w-10 h-10 flex items-center justify-center rounded-full bg-neutral hover:bg-gray-200 transition-colors">
+                            <i class="ri-add-line text-xl"></i>
+                        </button>
+                    </form>
                 </div>
             </div>
-        <% }); %>
+            <% }) %>
+        </div>
     </div>
 
-    <!-- Pagination -->
-    <div class="mt-8 flex justify-center">
-        <nav class="flex items-center gap-2">
-            <button class="px-3 py-1 rounded-lg border border-gray-200 hover:bg-gray-50">
-                <i class="ri-arrow-left-s-line"></i>
-            </button>
-            <button class="px-3 py-1 rounded-lg bg-primary text-white">1</button>
-            <button class="px-3 py-1 rounded-lg border border-gray-200 hover:bg-gray-50">2</button>
-            <button class="px-3 py-1 rounded-lg border border-gray-200 hover:bg-gray-50">3</button>
-            <button class="px-3 py-1 rounded-lg border border-gray-200 hover:bg-gray-50">
-                <i class="ri-arrow-right-s-line"></i>
-            </button>
-        </nav>
-    </div>
-</div>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.add-to-cart-btn').forEach(function(btn) {
+        btn.addEventListener('click', async function(e) {
+            e.preventDefault();
+            const productId = this.getAttribute('data-product-id');
+            try {
+                const response = await fetch('/cart/add', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({ productId, quantity: 1 })
+                });
+                const data = await response.json();
+                if (data.success) {
+                    // Optionally update cart counter in header
+                    let cartCount = document.querySelector('.cart-count');
+                    if (cartCount) {
+                        cartCount.textContent = data.cartCount;
+                    }
+                    alert('Added to cart!');
+                } else {
+                    alert(data.error || 'Could not add to cart.');
+                }
+            } catch (err) {
+                alert('Error adding to cart.');
+            }
+        });
+    });
+});
+</script>
 
-<%- include('./partials/footer') %>
+    <%- include('./partials/footer') %>
+
+    <script>
+        document.getElementById('searchForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const searchQuery = document.getElementById('searchInput').value.trim();
+            if (searchQuery) {
+                // Preserve existing query parameters
+                const params = new URLSearchParams(window.location.search);
+                params.set('search', searchQuery);
+                window.location.href = `/shop?${params.toString()}`;
+            }
+        });
+
+        // Initialize search input with current search query if exists
+        window.addEventListener('load', function() {
+            const params = new URLSearchParams(window.location.search);
+            const searchQuery = params.get('search');
+            if (searchQuery) {
+                document.getElementById('searchInput').value = searchQuery;
+            }
+        });
+    </script>
+</body>
+</html>

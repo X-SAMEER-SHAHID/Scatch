@@ -10,27 +10,31 @@
             <div class="w-full h-screen flex px-20">
                 <div class="w-1/2 flex items-center justify-center h-screen">
                     <div class="w-full px-32">
+                        <div id="messageContainer">
+                            <!-- Messages will be displayed here -->
+                        </div>
                         <h3 class="text-4xl">welcome to <span class="text-blue-400 font-semibold">Scatch</span></h3>
                         <h4 class="text-2xl mb-5">create your account</h4>
-                        <form autocomplete="off" action="/api/auth/register" method="post">
+                        <form id="mainRegisterForm" onsubmit="return false;">
                             <input
                                 class="bg-zinc-100 block w-full px-3 py-2 border-[1px] rounded-md mb-3 border-zinc-200"
-                                type="text" placeholder="Full Name" name="fullname">
+                                type="text" placeholder="Full Name" name="fullName" id="fullName" required>
                             <input
                                 class="bg-zinc-100 block w-full px-3 py-2 border-[1px] rounded-md mb-3 border-zinc-200"
-                                type="email" placeholder="Email" name="email">
+                                type="email" placeholder="Email" name="email" id="email" required>
                             <input
                                 class="bg-zinc-100 block w-full px-3 py-2 border-[1px] rounded-md mb-3 border-zinc-200"
-                                type="password" placeholder="Password" name="password">
-                            <input class="px-5 rounded-full py-3 mt-2 bg-blue-500 text-white" type="submit"
-                                value="Create My Account">
+                                type="password" placeholder="Password" name="password" id="password" required>
+                            <button onclick="registerUser()" class="px-5 rounded-full py-3 mt-2 bg-blue-500 text-white w-full" type="button" id="registerBtn">
+                                Create My Account
+                            </button>
                         </form>
                     </div>
                 </div>
                 <div class="w-1/2 flex items-center justify-center h-screen">
                     <div class="w-full px-32">
                         <h4 class="text-2xl capitalize mb-5">login your account</h4>
-                        <form autocomplete="off" action="/api/auth/login" method="post">
+                        <form autocomplete="off" action="/auth/login" method="post">
                             <input
                                 class="block bg-zinc-100 w-full px-3 py-2 border-[1px] rounded-md mb-3 border-zinc-200"
                                 type="email" placeholder="Email" name="email">
@@ -43,4 +47,69 @@
                     </div>
                 </div>
             </div>
+
+            <script>
+            function showMessage(message, type) {
+                const container = document.getElementById('messageContainer');
+                container.innerHTML = `<div class="p-3 rounded-md mb-4 ${type === 'success' ? 'bg-green-500' : 'bg-red-500'} text-white">${message}</div>`;
+            }
+
+            async function registerUser() {
+                const fullName = document.getElementById('fullName').value;
+                const email = document.getElementById('email').value;
+                const password = document.getElementById('password').value;
+                const registerBtn = document.getElementById('registerBtn');
+                
+                // Validate inputs
+                if (!fullName || !email || !password) {
+                    showMessage('Please fill in all fields', 'error');
+                    return;
+                }
+                
+                // Disable button and show loading
+                registerBtn.disabled = true;
+                registerBtn.textContent = 'Creating Account...';
+                
+                try {
+                    console.log('Making registration request');
+                    
+                    const response = await fetch('/auth/test-register', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            fullName: fullName,
+                            email: email,
+                            password: password
+                        })
+                    });
+                    
+                    console.log('Response status:', response.status);
+                    
+                    if (response.ok) {
+                        const result = await response.json();
+                        console.log('Registration successful:', result);
+                        showMessage('Registration successful! Redirecting to shop...', 'success');
+                        
+                        // Redirect to shop after 2 seconds
+                        setTimeout(() => {
+                            window.location.href = '/shop';
+                        }, 2000);
+                    } else {
+                        const errorData = await response.json();
+                        console.log('Registration failed:', errorData);
+                        showMessage(errorData.error || 'Registration failed. Please try again.', 'error');
+                    }
+                } catch (error) {
+                    console.error('Registration error:', error);
+                    showMessage('Network error. Please try again.', 'error');
+                } finally {
+                    // Re-enable button
+                    registerBtn.disabled = false;
+                    registerBtn.textContent = 'Create My Account';
+                }
+            }
+            </script>
+
             <%- include('./partials/footer') %>

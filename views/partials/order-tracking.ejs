@@ -1,0 +1,105 @@
+<%
+function getStatusClass(currentStatus, targetStatus) {
+    const statuses = ['pending', 'ordered', 'in_transit', 'out_for_delivery', 'delivered'];
+    const currentIndex = statuses.indexOf(currentStatus.toLowerCase());
+    const targetIndex = statuses.indexOf(targetStatus);
+    return currentIndex >= targetIndex ? 'bg-green-400' : 'bg-gray-200';
+}
+
+function getProgressWidth(status) {
+    switch(status.toLowerCase()) {
+        case 'pending': return '0%';
+        case 'ordered': return '25%';
+        case 'in_transit': return '50%';
+        case 'out_for_delivery': return '75%';
+        case 'delivered': return '100%';
+        default: return '0%';
+    }
+}
+%>
+
+<div class="order-tracking-container bg-white p-6 rounded-lg shadow-sm mb-6">
+    <div class="info-section mb-4">
+        <div class="flex justify-between items-start">
+            <div>
+                <h3 class="text-xl font-semibold text-gray-800">INFO ABOUT YOUR ORDER</h3>
+                <p class="text-2xl font-bold text-gray-900">#<%= order.orderNumber %></p>
+                <p class="text-lg text-gray-600">Status: <span class="text-green-500"><%= order.status %></span></p>
+                <% if (order.status.toLowerCase() === 'delivered') { %>
+                    <p class="text-gray-600">The order has been delivered successfully.</p>
+                <% } %>
+            </div>
+            <a href="/orders/<%= order._id %>" class="inline-flex items-center px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors">
+                <span>View Details</span>
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 ml-2" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                </svg>
+            </a>
+        </div>
+    </div>
+
+    <div class="tracking-visualization relative mb-8">
+        <div class="flex justify-between items-center relative">
+            <!-- Progress Line -->
+            <div class="absolute left-0 right-0 h-1 top-1/2 transform -translate-y-1/2">
+                <div class="h-full bg-gray-200">
+                    <div class="h-full bg-green-400 transition-all duration-500" style="width: <%= getProgressWidth(order.status) %>"></div>
+                </div>
+            </div>
+
+            <!-- Status Points -->
+            <div class="relative z-10 flex justify-between w-full">
+                <div class="flex flex-col items-center">
+                    <div class="w-8 h-8 rounded-full <%= getStatusClass(order.status, 'ordered') %> flex items-center justify-center">
+                        <svg class="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"/>
+                        </svg>
+                    </div>
+                    <span class="mt-2 text-sm font-medium text-gray-600">Ordered</span>
+                </div>
+
+                <div class="flex flex-col items-center">
+                    <div class="w-8 h-8 rounded-full <%= getStatusClass(order.status, 'in_transit') %> flex items-center justify-center">
+                        <svg class="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"/>
+                        </svg>
+                    </div>
+                    <span class="mt-2 text-sm font-medium text-gray-600">In Transit</span>
+                </div>
+
+                <div class="flex flex-col items-center">
+                    <div class="w-8 h-8 rounded-full <%= getStatusClass(order.status, 'out_for_delivery') %> flex items-center justify-center">
+                        <svg class="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"/>
+                        </svg>
+                    </div>
+                    <span class="mt-2 text-sm font-medium text-gray-600">Out for delivery</span>
+                </div>
+
+                <div class="flex flex-col items-center">
+                    <div class="w-8 h-8 rounded-full <%= getStatusClass(order.status, 'delivered') %> flex items-center justify-center">
+                        <svg class="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"/>
+                        </svg>
+                    </div>
+                    <span class="mt-2 text-sm font-medium text-gray-600">Delivered</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Status Timeline -->
+    <div class="status-timeline space-y-3">
+        <% if (order.tracking && order.tracking.length > 0) { %>
+            <% order.tracking.slice().reverse().forEach(function(event) { %>
+                <div class="flex items-start">
+                    <div class="w-3 h-3 mt-1.5 rounded-full bg-green-400 mr-3"></div>
+                    <div>
+                        <p class="font-medium text-gray-800"><%= event.status %></p>
+                        <p class="text-sm text-gray-500"><%= new Date(event.timestamp).toLocaleString() %></p>
+                    </div>
+                </div>
+            <% }); %>
+        <% } %>
+    </div>
+</div> 

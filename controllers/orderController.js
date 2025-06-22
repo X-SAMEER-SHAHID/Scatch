@@ -1,16 +1,15 @@
-const Order = require('../models/Order');
+const Order = require('../models/ordermodel');
 
 // Get all orders for a user
-exports.getOrders = async (req, res) => {
+exports.getUserOrders = async (req, res) => {
     try {
         const orders = await Order.find({ user: req.user._id })
-            .populate('items.product')
-            .sort({ createdAt: -1 });
+            .sort({ createdAt: -1 }); // Sort by newest first
 
-        res.render('orders', { orders });
+        res.json(orders);
     } catch (error) {
-        req.flash('error', 'Error loading orders');
-        res.redirect('/');
+        console.error('Error fetching orders:', error);
+        res.status(500).json({ error: 'Error fetching orders' });
     }
 };
 
@@ -18,77 +17,85 @@ exports.getOrders = async (req, res) => {
 exports.getOrderDetails = async (req, res) => {
     try {
         const order = await Order.findOne({
-            _id: req.params.id,
+            _id: req.params.orderId,
             user: req.user._id
-        }).populate('items.product');
-
-        if (!order) {
-            req.flash('error', 'Order not found');
-            return res.redirect('/orders');
-        }
-
-        res.render('order-details', { order });
-    } catch (error) {
-        req.flash('error', 'Error loading order details');
-        res.redirect('/orders');
-    }
-};
-
-// Cancel order
-exports.cancelOrder = async (req, res) => {
-    try {
-        const order = await Order.findOne({
-            _id: req.params.id,
-            user: req.user._id,
-            status: 'processing'
         });
 
         if (!order) {
-            req.flash('error', 'Order cannot be cancelled');
-            return res.redirect('/orders');
+            return res.status(404).json({ error: 'Order not found' });
         }
 
-        order.status = 'cancelled';
+        res.json(order);
+    } catch (error) {
+        console.error('Error fetching order details:', error);
+        res.status(500).json({ error: 'Error fetching order details' });
+    }
+};
+
+// Update order status (admin only)
+exports.updateOrderStatus = async (req, res) => {
+    try {
+        const { orderId } = req.params;
+        const { status, location, details } = req.body;
+
+        const order = await Order.findById(orderId);
+        if (!order) {
+            return res.status(404).json({ error: 'Order not found' });
+        }
+
+        // Add new tracking event
+        order.tracking.push({
+            status,
+            location,
+            details,
+            timestamp: new Date()
+        });
+
+        // Update current status
+        order.status = status;
+        order.updatedAt = new Date();
+
         await order.save();
 
-        req.flash('success', 'Order cancelled successfully');
-        res.redirect('/orders');
+        res.json(order);
     } catch (error) {
-        req.flash('error', 'Error cancelling order');
-        res.redirect('/orders');
+        console.error('Error updating order status:', error);
+        res.status(500).json({ error: 'Error updating order status' });
     }
 };
 
 // Create new order
 exports.createOrder = async (req, res) => {
     try {
-        const { items, shippingAddress, paymentMethod } = req.body;
-
-        // Calculate total
-        const total = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-
-        // Generate order number
-        const orderNumber = 'ORD' + Date.now().toString().slice(-6);
+        const { items, total, paymentMethod, shippingAddress, billingAddress } = req.body;
 
         const order = new Order({
             user: req.user._id,
-            orderNumber,
             items,
             total,
-            shippingAddress,
             paymentMethod,
-            status: 'processing'
+            shippingAddress,
+            billingAddress,
+            orderNumber: generateOrderNumber(),
+            status: 'ordered',
+            tracking: [{
+                status: 'ordered',
+                details: 'Order placed successfully',
+                timestamp: new Date()
+            }]
         });
 
         await order.save();
-
-        // Clear cart after successful order
-        req.session.cart = null;
-
-        req.flash('success', 'Order placed successfully');
-        res.redirect(`/orders/${order._id}`);
+        res.status(201).json(order);
     } catch (error) {
-        req.flash('error', 'Error creating order');
-        res.redirect('/cart');
+        console.error('Error creating order:', error);
+        res.status(500).json({ error: 'Error creating order' });
     }
-}; 
+};
+
+// Helper function to generate order number
+function generateOrderNumber() {
+    const timestamp = Date.now().toString();
+    const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+    return `${timestamp}${random}`;
+}

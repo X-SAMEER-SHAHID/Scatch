@@ -1,67 +1,234 @@
 <%- include('./partials/header') %>
-
-<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-    <h1 class="text-3xl font-bold text-gray-900 mb-8">Shopping Cart</h1>
-
-    <% if (cart && cart.length > 0) { %>
-        <div class="bg-white shadow overflow-hidden sm:rounded-lg">
-            <ul class="divide-y divide-gray-200">
-                <% cart.forEach(item => { %>
-                    <li class="p-6">
-                        <div class="flex items-center">
-                            <div class="flex-shrink-0 h-24 w-24">
-                                <img class="h-24 w-24 object-cover rounded-md" src="<%= item.product.images[0] %>" alt="<%= item.product.name %>">
-                            </div>
-                            <div class="ml-6 flex-1">
-                                <div class="flex items-center justify-between">
-                                    <h3 class="text-lg font-medium text-gray-900">
-                                        <%= item.product.name %>
-                                    </h3>
-                                    <p class="ml-4 text-lg font-medium text-gray-900">
-                                        $<%= (item.product.price * item.quantity).toFixed(2) %>
-                                    </p>
-                                </div>
-                                <div class="mt-2 flex items-center justify-between">
-                                    <div class="flex items-center">
-                                        <form action="/cart/update/<%= item.product._id %>" method="POST" class="flex items-center">
-                                            <label for="quantity" class="mr-2 text-sm text-gray-600">Quantity:</label>
-                                            <select name="quantity" id="quantity" onchange="this.form.submit()" class="rounded-md border-gray-300 text-sm">
-                                                <% for(let i = 1; i <= 10; i++) { %>
-                                                    <option value="<%= i %>" <%= item.quantity === i ? 'selected' : '' %>><%= i %></option>
-                                                <% } %>
-                                            </select>
-                                        </form>
-                                    </div>
-                                    <form action="/cart/remove/<%= item.product._id %>" method="POST">
-                                        <button type="submit" class="text-red-600 hover:text-red-900 text-sm font-medium">
-                                            Remove
-                                        </button>
-                                    </form>
-                                </div>
+    <div class="w-full min-h-screen bg-neutral flex items-start px-8 py-10 gap-8">
+        <div class="w-[35%] rounded-xl overflow-hidden bg-surface shadow-lg">
+            <!-- Carousel Container -->
+            <div class="carousel relative">
+                <% user.cart.forEach((item, index) => { %>
+                    <div class="carousel-item <%= index === 0 ? 'active' : '' %>" data-item-id="<%= item._id %>">
+                        <div class="w-full flex justify-center items-center h-80 gradient-primary">
+                            <img class="h-[12rem] hover:scale-110 transition-transform duration-300" 
+                                 src="data:image/jpeg;base64, <%= item.image.toString('base64') %>" alt="">
+                        </div>
+                        <div class="w-full flex justify-between px-6 py-4 bg-surface border-b border-neutral">
+                            <h3 class="text-xl font-medium text-secondary"><%= item.name %></h3>
+                            <div class="flex items-center gap-3">
+                                <button class="w-8 h-8 bg-neutral flex rounded-full items-center justify-center hover:bg-gray-200 transition-colors minus-btn">-</button>
+                                <div class="px-4 py-1 rounded-lg bg-neutral font-medium quantity-display"><%= item.quantity || 1 %></div>
+                                <button class="w-8 h-8 bg-neutral flex rounded-full items-center justify-center hover:bg-gray-200 transition-colors plus-btn">+</button>
                             </div>
                         </div>
-                    </li>
-                <% }); %>
-            </ul>
-            <div class="border-t border-gray-200 px-6 py-4">
-                <div class="flex justify-between items-center">
-                    <div class="text-lg font-medium text-gray-900">
-                        Total: $<%= cart.reduce((total, item) => total + (item.product.price * item.quantity), 0).toFixed(2) %>
+                        <div class="flex items-center justify-between px-6 py-4 bg-surface">
+                            <h4 class="text-gray-600">Net Total</h4>
+                            <div class="flex flex-col gap-2">
+                                <h2 class="text-xl font-semibold text-success item-total" data-price="<%= item.price %>">Rs <%= item.price * (item.quantity || 1) %></h2>
+                            </div>
+                        </div>
                     </div>
-                    <a href="/shop" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700">
-                        Continue Shopping
-                    </a>
-                </div>
+                <% }) %>
+                <button class="carousel-prev absolute left-2 top-1/2 transform -translate-y-1/2 bg-surface/90 text-secondary px-3 py-4 rounded-full shadow-lg hover:bg-surface transition-all">&lt;</button>
+                <button class="carousel-next absolute right-2 top-1/2 transform -translate-y-1/2 bg-surface/90 text-secondary px-3 py-4 rounded-full shadow-lg hover:bg-surface transition-all">&gt;</button>
             </div>
         </div>
-    <% } else { %>
-        <div class="text-center py-12">
-            <h3 class="text-lg font-medium text-gray-900 mb-4">Your cart is empty</h3>
-            <a href="/shop" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700">
-                Start Shopping
-            </a>
+        
+        <div class="w-[65%] bg-surface rounded-xl shadow-lg p-8">
+            <h3 class="text-2xl font-semibold text-secondary mb-6">Price Breakdown</h3>
+            <div class="px-10 mt-5">
+                <div class="flex justify-between items-center mb-2">
+                    <h3>Total MRP</h3>
+                    <h4 class="text-secondary" id="total-mrp">Rs 0</h4>
+                </div>
+                <div class="flex justify-between items-center mb-2">
+                    <h3>Discount</h3>
+                    <h4>Rs 0</h4>
+                </div>
+                <div class="flex justify-between items-center mb-2">
+                    <h3>Platform fee</h3>
+                    <h4 class="text-secondary" id="platform-fee">Rs 20</h4>
+                </div>
+                <div class="flex mt-2">
+                    <h4 class="w-1/3 text-gray-600">Shipping Fee</h4>
+                    <h4>FREE</h4>
+                </div>
+            </div>
+            <div class="w-full h-[1px] bg-neutral mt-10"></div>
+            <div class="flex mt-5">
+                <h3 class="w-1/3 text-xl text-secondary">Total Amount</h3>
+                <h3 class="font-semibold text-xl text-success" id="total-amount">Rs 0</h3>
+            </div>
+            <div class="flex justify-end mt-8">
+                <a href="/checkout" class="px-8 py-3 bg-success text-white rounded-lg text-lg font-semibold shadow hover:bg-green-700 transition-colors">Checkout</a>
+            </div>
+            <form action=""></form>
         </div>
-    <% } %>
-</div>
+    </div>
+
+    <style>
+        .carousel {
+            position: relative;
+            overflow: hidden;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .carousel-item {
+            display: none;  /* Changed from opacity: 0 */
+            width: 100%;
+        }
+
+        .carousel-item.active {
+            display: block;  /* Changed from opacity: 1 */
+        }
+
+        .carousel-prev,
+        .carousel-next {
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            background: rgba(0, 0, 0, 0.6);
+            border: 2px solid white;
+            z-index: 10;  /* Added to ensure buttons are clickable */
+        }
+
+        .carousel-prev:hover,
+        .carousel-next:hover {
+            background: rgba(0, 0, 0, 0.8);
+            transform: scale(1.1);
+        }
+
+        .carousel-item img {
+            transition: transform 0.3s ease;
+        }
+
+        .carousel-item:hover img {
+            transform: scale(1.05);
+        }
+    </style>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const carousel = document.querySelector('.carousel');
+            const items = Array.from(carousel.querySelectorAll('.carousel-item'));
+            const nextButton = carousel.querySelector('.carousel-next');
+            const prevButton = carousel.querySelector('.carousel-prev');
+            let currentIndex = 0;
+
+            // Function to update active slide
+            function updateSlide(newIndex) {
+                // Remove active class from all items
+                items.forEach(item => {
+                    item.classList.remove('active');
+                    item.style.display = 'none';
+                });
+                
+                // Add active class to current item
+                items[newIndex].classList.add('active');
+                items[newIndex].style.display = 'block';
+                
+                currentIndex = newIndex;
+            }
+
+            // Initialize first slide
+            updateSlide(0);
+
+            // Next button click
+            nextButton.addEventListener('click', () => {
+                const newIndex = (currentIndex + 1) % items.length;
+                updateSlide(newIndex);
+            });
+
+            // Previous button click
+            prevButton.addEventListener('click', () => {
+                const newIndex = (currentIndex - 1 + items.length) % items.length;
+                updateSlide(newIndex);
+            });
+
+            // Add touch swipe support
+            let touchStartX = 0;
+            let touchEndX = 0;
+
+            carousel.addEventListener('touchstart', e => {
+                touchStartX = e.changedTouches[0].screenX;
+            });
+
+            carousel.addEventListener('touchend', e => {
+                touchEndX = e.changedTouches[0].screenX;
+                handleSwipe();
+            });
+
+            function handleSwipe() {
+                const swipeThreshold = 50;
+                const diff = touchStartX - touchEndX;
+
+                if (Math.abs(diff) > swipeThreshold) {
+                    if (diff > 0) {
+                        nextButton.click();
+                    } else {
+                        prevButton.click();
+                    }
+                }
+            }
+
+            // Update total MRP and total amount
+            function updateTotals() {
+                let totalMRP = 0;
+                document.querySelectorAll('.carousel-item').forEach(function(item) {
+                    const quantity = parseInt(item.querySelector('.quantity-display').textContent);
+                    const price = parseInt(item.querySelector('.item-total').getAttribute('data-price'));
+                    totalMRP += price * quantity;
+                });
+                document.getElementById('total-mrp').textContent = 'Rs ' + totalMRP;
+                const platformFee = 20;
+                document.getElementById('total-amount').textContent = 'Rs ' + (totalMRP + platformFee);
+            }
+
+            document.querySelectorAll('.carousel-item').forEach(function(item) {
+                const itemId = item.getAttribute('data-item-id');
+                const minusBtn = item.querySelector('.minus-btn');
+                const plusBtn = item.querySelector('.plus-btn');
+                const quantityDisplay = item.querySelector('.quantity-display');
+                const itemTotal = item.querySelector('.item-total');
+                let quantity = parseInt(quantityDisplay.textContent);
+                const price = parseInt(itemTotal.getAttribute('data-price'));
+
+                minusBtn.addEventListener('click', async function() {
+                    if (quantity > 1) {
+                        quantity--;
+                        const response = await fetch(`/cart/update/${itemId}`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ quantity })
+                        });
+                        const data = await response.json();
+                        if (data.success) {
+                            quantityDisplay.textContent = quantity;
+                            itemTotal.textContent = 'Rs ' + (price * quantity);
+                            updateTotals();
+                        }
+                    }
+                });
+                plusBtn.addEventListener('click', async function() {
+                    quantity++;
+                    const response = await fetch(`/cart/update/${itemId}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ quantity })
+                    });
+                    const data = await response.json();
+                    if (data.success) {
+                        quantityDisplay.textContent = quantity;
+                        itemTotal.textContent = 'Rs ' + (price * quantity);
+                        updateTotals();
+                    }
+                });
+            });
+            updateTotals();
+        });
+    </script>
 
 <%- include('./partials/footer') %>

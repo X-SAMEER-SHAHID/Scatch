@@ -1,132 +1,97 @@
-const express = require('express');
-const mongoose = require('mongoose');
-const cors = require('cors');
-const helmet = require('helmet');
-const compression = require('compression');
-const mongoSanitize = require('express-mongo-sanitize');
-const xss = require('xss-clean');
-const hpp = require('hpp');
-const rateLimit = require('express-rate-limit');
-const cookieParser = require('cookie-parser');
-const session = require('express-session');
-const flash = require('connect-flash');
-const passport = require('passport');
-const path = require('path');
-const dotenv = require('dotenv');
-
-// Load environment variables
-dotenv.config();
-
-// Create Express app
+const express = require("express");
 const app = express();
+const cookieParser = require("cookie-parser");
+const path = require("path");
+const flash = require("connect-flash");
+const expressSession = require("express-session");
+const multer = require("multer");
+const isLoggedIn = require('./middlewares/isLoggedIn');
 
-// Set view engine
-app.set('view engine', 'ejs');
-app.set('views', path.join(__dirname, 'views'));
+require("dotenv").config();
 
-// Security middleware
-app.use(helmet({
-    contentSecurityPolicy: false // Disable CSP for development
-}));
-app.use(cors());
-app.use(mongoSanitize());
-app.use(xss());
-app.use(hpp());
+const ownersRouter = require("./routes/ownersRouter");
+const usersRouter = require("./routes/usersRouter");
+const productsRouter = require("./routes/productsRouter");
+const indexRoutes = require("./routes/index");
+const authRoutes = require("./routes/authRoutes");
+const inventoryRouter = require("./routes/inventoryRouter");
+const cartRoutes = require("./routes/cartRoutes");
+const adminRoutes = require("./routes/adminRoutes");
 
-// Body parser middleware
+const db = require("./config/mongoose-connection")
+
+// Debug middleware - log all requests
+app.use((req, res, next) => {
+    console.log('Incoming Request:', {
+        method: req.method,
+        url: req.url,
+        originalUrl: req.originalUrl,
+        baseUrl: req.baseUrl,
+        path: req.path,
+        body: req.body,
+        headers: req.headers
+    });
+    next();
+});
+
+// Basic middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
 // Session configuration
-app.use(session({
-    secret: process.env.SESSION_SECRET || 'your-secret-key',
-    resave: false,
-    saveUninitialized: false,
-    cookie: {
-        secure: process.env.NODE_ENV === 'production',
-        httpOnly: true,
-        maxAge: 24 * 60 * 60 * 1000 // 24 hours
-    }
-}));
+app.use(
+    expressSession({
+        secret: process.env.EXPRESS_SESSION_SECRET || 'your-secret-key',
+        resave: false,
+        saveUninitialized: false,
+        cookie: {
+            secure: process.env.NODE_ENV === 'production',
+            httpOnly: true,
+            maxAge: 24 * 60 * 60 * 1000 // 24 hours
+        }
+    })
+);
 
-// Flash messages
 app.use(flash());
 
-// Make flash messages available to all views
+// Static files
+app.use(express.static(path.join(__dirname, "public")));
+app.set('view engine', 'ejs')
+
+// Make user data available to all templates
 app.use((req, res, next) => {
-    res.locals.error = req.flash('error');
-    res.locals.success = req.flash('success');
+    res.locals.user = req.user;
+    res.locals.isAuthenticated = !!req.user;
     next();
 });
 
-// Static files
-app.use(express.static(path.join(__dirname, 'public')));
+// Auth routes must be first to handle /auth/* properly
+app.use("/auth", authRoutes);
 
-// Rate limiting
-const limiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 100 // limit each IP to 100 requests per windowMs
-});
-app.use('/api', limiter);
+// Public routes that don't require authentication
+app.use("/", indexRoutes);
 
-// Passport middleware
-app.use(passport.initialize());
-app.use(passport.session());
-
-// Compression
-app.use(compression());
-
-// Database connection
-mongoose.connect(process.env.MONGODB_URI, {
-    useNewUrlParser: true
-})
-    .then(() => console.log('Connected to MongoDB'))
-    .catch(err => console.error('MongoDB connection error:', err));
-
-// Routes
-app.use('/', require('./routes/index'));
-app.use('/shop', require('./routes/shop'));
-app.use('/cart', require('./routes/cart'));
-app.use('/api/auth', require('./routes/auth'));
-app.use('/users', require('./routes/users'));
-app.use('/orders', require('./routes/orders'));
-app.use('/addresses', require('./routes/addresses'));
-app.use('/api/products', require('./routes/products'));
-app.use('/api/categories', require('./routes/categories'));
-app.use('/api/brands', require('./routes/brands'));
-app.use('/api/coupons', require('./routes/coupons'));
-app.use('/api/giftcards', require('./routes/giftcards'));
-app.use('/api/notifications', require('./routes/notifications'));
-app.use('/api/payments', require('./routes/payments'));
-app.use('/api/shipping', require('./routes/shipping'));
-app.use('/api/taxes', require('./routes/taxes'));
-app.use('/api/discounts', require('./routes/discounts'));
-app.use('/api/warehouses', require('./routes/warehouses'));
-
-// Root route
-app.get('/', (req, res) => {
-    res.render('index', {
-        title: 'Welcome to Scatch',
-        error: req.flash('error'),
-        success: req.flash('success'),
-        loggedin: false
-    });
-});
+// Protected routes that require authentication
+app.use("/owner", isLoggedIn, ownersRouter);
+app.use("/users", isLoggedIn, usersRouter);
+app.use("/products", isLoggedIn, productsRouter);
+app.use("/inventory", isLoggedIn, inventoryRouter);
+app.use("/cart", isLoggedIn, cartRoutes);
+app.use("/admin", isLoggedIn, adminRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
-    console.error(err.stack);
-    res.status(err.status || 500).json({
-        status: 'error',
-        message: err.message || 'Internal server error'
-    });
+    console.error('Error:', err);
+    res.status(500).render('error', { error: 'Something broke!' });
 });
 
-// Start server
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
+// 404 handler
+app.use((req, res) => {
+    console.log('404 Not Found:', req.url);
+    res.status(404).render('error', { error: 'Page not found' });
 });
 
-module.exports = app;
+app.listen(3000, () => {
+    console.log("Server is running on port 3000");
+});
